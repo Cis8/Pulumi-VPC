@@ -8,7 +8,7 @@ export class VPC {
   constructor(){
   }
 
-  vpc?: aws.ec2.Vpc;
+  public vpc?: aws.ec2.Vpc;
 
   getName(){return "";}
 
