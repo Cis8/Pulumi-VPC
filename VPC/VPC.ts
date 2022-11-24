@@ -1,8 +1,3 @@
-// CIDR: 10.136.0.0/24
-// CIDRa: 10.136.0.1/24
-// CIDRb: 10.136.0.2/24
-// CIDRc: 10.136.0.3/24
-
 import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
 import { GetVpcResult, Subnet } from "@pulumi/aws/ec2";
@@ -92,7 +87,7 @@ export class VPC extends ComponentResource {
           cidrBlock: this.pvtSubnetsCidrs[i]
         },
         {
-          parent: this,
+          parent: this
         }
         ));
 
@@ -102,13 +97,13 @@ export class VPC extends ComponentResource {
           cidrBlock: this.pubSubnetsCidrs[i]
         },
         {
-          parent: this,
+          parent: this
         }
         ));
         i++;
       });
 
-      // attaching the route table to the sub net
+      // attaching the route table to the pub sub nets
       this.attachRouteTableToPubSubnets()
     });
   }
@@ -133,11 +128,13 @@ export class VPC extends ComponentResource {
 
   protected attachRouteTableToPubSubnets(){
     let i = 0
-    //console.log(`this.pubSubNets length: ${this.pubSubNets.length}`)
     this.pubSubNets.forEach(subNet => {
       new aws.ec2.RouteTableAssociation(`${i}-routeTableAssociation`, {
         subnetId: subNet.id,
         routeTableId: this.routeTable!.id,
+      },
+      {
+        parent: this
       });
       i++
     });
