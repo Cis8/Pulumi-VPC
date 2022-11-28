@@ -1,0 +1,6 @@
+name: scala
+runtime:
+  name: java
+  options:
+    binary: sbt run
+description: A minimal AWS Scala Pulumi program
