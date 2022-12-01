@@ -38,39 +38,6 @@ class VPC(name: String, ty: String = "VPC", opts: com.pulumi.resources.Component
 
   val pvtSubnetsCidrs: List[String] = List("10.136.0.0/27", "10.136.0.32/27", "10.136.0.64/27")
   val pubSubnetsCidrs: List[String] = List("10.136.0.96/27", "10.136.0.128/27", "10.136.0.160/27")
-
-  // implicit builder b is used inside init
-  def vpc(name: String)(init: VpcArgs.Builder ?=> Unit)/*(initOpts: CustomResourceOptions.Builder ?=> Unit)*/: Vpc =
-    given b: VpcArgs.Builder = VpcArgs.builder()
-    init
-    /*given ob: CustomResourceOptions.Builder = CustomResourceOptions.builder()
-    initOpts*/
-    Vpc(name, b.build()/*, ob.build()*/)
-
-  def igw(name: String)(init: InternetGatewayArgs.Builder ?=> Unit): InternetGateway =
-    given b: InternetGatewayArgs.Builder = InternetGatewayArgs.builder()
-    init
-    InternetGateway(name, b.build())
-  
-  def subnet(name: String)(init: SubnetArgs.Builder ?=> Unit): Subnet =
-    given b: SubnetArgs.Builder = SubnetArgs.builder()
-    init
-    Subnet(name, b.build())
-
-  def routeTableRouteArgs()(init: RouteTableRouteArgs.Builder ?=> Unit): RouteTableRouteArgs =
-    given b: RouteTableRouteArgs.Builder = RouteTableRouteArgs.builder()
-    init
-    b.build()
-  
-  def routeTableAssociation(assocName: String)(init: RouteTableAssociationArgs.Builder ?=> Unit): RouteTableAssociation =
-    given b: RouteTableAssociationArgs.Builder = RouteTableAssociationArgs.builder()
-    init
-    RouteTableAssociation(assocName, b.build())
-  
-  def routeTable(name: String)(init: RouteTableArgs.Builder ?=> Unit): RouteTable =
-    given b: RouteTableArgs.Builder = RouteTableArgs.builder()
-    init
-    RouteTable(name, b.build())
     
 
   // the builder is implicit inside init (the { } block)
@@ -99,14 +66,14 @@ class VPC(name: String, ty: String = "VPC", opts: com.pulumi.resources.Component
 
   def createAzSubnets(isPvt: Boolean) =
     myAzNames.map((az: GetAvailabilityZonesResult) =>
-    for
-      (name, cidr) <- az.names().zip(if isPvt then pvtSubnetsCidrs else pubSubnetsCidrs)
-    yield
-      subnet(name + "-" + (if isPvt then "pvt" else "pub") + "-subnet"){
-        vpcId(myVpc.getId())
-        availabilityZone(name)
-        cidrBlock(cidr)
-      }
+      for
+        (name, cidr) <- az.names().zip(if isPvt then pvtSubnetsCidrs else pubSubnetsCidrs)
+      yield
+        subnet(name + "-" + (if isPvt then "pvt" else "pub") + "-subnet"){
+          vpcId(myVpc.getId())
+          availabilityZone(name)
+          cidrBlock(cidr)
+        }
   )
 
   val myRouteTable = routeTable("myRouteTable"){
