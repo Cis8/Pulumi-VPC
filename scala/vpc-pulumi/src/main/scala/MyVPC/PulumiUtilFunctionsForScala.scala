@@ -66,3 +66,7 @@ def routeTable(name: String)(init: RouteTableArgs.Builder ?=> Unit): RouteTable 
   given b: RouteTableArgs.Builder = RouteTableArgs.builder()
   init
   RouteTable(name, b.build())
+
+def azNames(): Output[GetAvailabilityZonesResult] = AwsFunctions.getAvailabilityZones(GetAvailabilityZonesArgs.builder()
+  .state("available")
+  .build())

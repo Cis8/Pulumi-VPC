@@ -54,9 +54,7 @@ class VPC(name: String, ty: String = "VPC", opts: com.pulumi.resources.Component
     //tags(java.util.Map.of("Name", "myIGW")) // can't use Scala map?
   }
 
-  val myAzNames: Output[GetAvailabilityZonesResult] = AwsFunctions.getAvailabilityZones(GetAvailabilityZonesArgs.builder()
-  .state("available")
-  .build())
+  
 
   val pvtSubnets: Output[Iterable[aws.ec2.Subnet]] = createAzSubnets(true)
 
@@ -65,7 +63,7 @@ class VPC(name: String, ty: String = "VPC", opts: com.pulumi.resources.Component
   val routeTableAssociations: Output[Iterable[RouteTableAssociation]] = attachRouteTableToPubSubnets()
 
   def createAzSubnets(isPvt: Boolean) =
-    myAzNames.map((az: GetAvailabilityZonesResult) =>
+    azNames().map((az: GetAvailabilityZonesResult) =>
       for
         (name, cidr) <- az.names().zip(if isPvt then pvtSubnetsCidrs else pubSubnetsCidrs)
       yield
