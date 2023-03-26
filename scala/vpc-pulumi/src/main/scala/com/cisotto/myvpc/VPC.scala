@@ -1,4 +1,12 @@
-package MyVPC
+package com.cisotto.myvpc
+
+import com.cisotto.myvpc.function.*
+import com.cisotto.myvpc.builder.*
+import com.pulumi.aws.ec2.{InternetGateway, RouteTableAssociation, Vpc}
+import com.pulumi.core.Output
+import com.pulumi.aws
+import com.pulumi.aws.outputs.GetAvailabilityZonesResult
+import com.cisotto.myvpc.monad.*
 
 import com.pulumi.Context
 import com.pulumi.Pulumi
@@ -21,7 +29,6 @@ import com.pulumi.aws.outputs.GetAvailabilityZonesResult
 import collection.convert.ImplicitConversionsToScala.`collection AsScalaIterable`
 import com.pulumi.aws.ec2.Subnet
 import com.pulumi.aws.ec2.SubnetArgs
-import MyVPC.MonadPkg.given_Monad_Output
 import scala.compiletime.ops.boolean
 import com.pulumi.resources.Resource
 import scala.compiletime.ops.string
@@ -34,7 +41,7 @@ import scala.collection.JavaConverters._
 import com.pulumi.aws.ec2.RouteTableAssociationArgs
 import com.pulumi.aws.ec2.RouteTableAssociation
 
-class VPC(name: String, ty: String = "VPC", opts: com.pulumi.resources.ComponentResourceOptions = null) extends ComponentResource(ty, name, opts) {
+class VPC(name: String, ty: String = "VPC") {
 
   val pvtSubnetsCidrs: List[String] = List("10.136.0.0/27", "10.136.0.32/27", "10.136.0.64/27")
   val pubSubnetsCidrs: List[String] = List("10.136.0.96/27", "10.136.0.128/27", "10.136.0.160/27")
@@ -49,7 +56,7 @@ class VPC(name: String, ty: String = "VPC", opts: com.pulumi.resources.Component
     parent(this) // why doesn't work?
   }*/
   
-  val myIGW: InternetGateway = igw("gw") {
+  val myIGW: InternetGateway = internetGateway("gw") {
     vpcId(myVpc.getId())
     //tags(java.util.Map.of("Name", "myIGW")) // can't use Scala map?
   }
@@ -63,7 +70,7 @@ class VPC(name: String, ty: String = "VPC", opts: com.pulumi.resources.Component
   val routeTableAssociations: Output[Iterable[RouteTableAssociation]] = attachRouteTableToPubSubnets()
 
   def createAzSubnets(isPvt: Boolean) =
-    azNames().map((az: GetAvailabilityZonesResult) =>
+    availabilityZonesNames().map((az: GetAvailabilityZonesResult) =>
       for
         (name, cidr) <- az.names().zip(if isPvt then pvtSubnetsCidrs else pubSubnetsCidrs)
       yield
@@ -72,7 +79,7 @@ class VPC(name: String, ty: String = "VPC", opts: com.pulumi.resources.Component
           availabilityZone(name)
           cidrBlock(cidr)
         }
-  )
+    )
 
   val myRouteTable = routeTable("myRouteTable"){
     vpcId(myVpc.getId())

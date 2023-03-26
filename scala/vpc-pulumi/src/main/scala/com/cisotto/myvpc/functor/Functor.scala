@@ -1,4 +1,4 @@
-package MyVPC.FunctorPkg
+package com.cisotto.myvpc.functor
 
 trait Functor[F[_]]:
   extension [A](x: F[A])

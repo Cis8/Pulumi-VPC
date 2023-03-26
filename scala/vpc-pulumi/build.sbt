@@ -10,5 +10,5 @@ lazy val root = project
 
     libraryDependencies += "org.scalameta" %% "munit" % "0.7.29" % Test,
     libraryDependencies += "com.google.guava" % "guava" % "17.0",
-    libraryDependencies += "com.pulumi" % "aws" % "5.16.2",
+    libraryDependencies += "com.pulumi" % "aws" % "5.32.0",
   )

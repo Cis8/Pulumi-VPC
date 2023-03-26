@@ -1,6 +1,6 @@
-package MyVPC.MonadPkg
+package com.cisotto.myvpc.monad
 
-import MyVPC.FunctorPkg.Functor
+import com.cisotto.myvpc.functor.Functor
 
 trait Monad[F[_]] extends Functor[F]:
 

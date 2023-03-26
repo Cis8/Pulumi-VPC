@@ -1,4 +1,4 @@
-package MyVPC.FunctorPkg
+package com.cisotto.myvpc.functor
 
 import com.pulumi.core.Output
 import scala.jdk.FunctionConverters._

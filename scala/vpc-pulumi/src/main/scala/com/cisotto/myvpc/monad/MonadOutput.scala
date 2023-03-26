@@ -1,4 +1,4 @@
-package MyVPC.MonadPkg
+package com.cisotto.myvpc.monad
 
 import com.pulumi.core.Output
 import scala.jdk.FunctionConverters._
