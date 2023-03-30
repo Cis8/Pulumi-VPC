@@ -108,6 +108,8 @@ import collection.convert.ImplicitConversionsToScala.`collection AsScalaIterable
 import scala.compiletime.ops.boolean
 import scala.compiletime.ops.string
 import scala.language.implicitConversions
+import scala.jdk.CollectionConverters._
+import scala.jdk.FunctionConverters.*
 
 type mapCustomerOwnedIpOnLaunchOwners = com.pulumi.aws.ec2.SubnetArgs.Builder
 type routesOwners = com.pulumi.aws.ec2.RouteTableArgs.Builder
@@ -154,13 +156,13 @@ type ipv4IpamPoolIdOwners = com.pulumi.aws.ec2.VpcArgs.Builder
 type enableClassiclinkOwners = com.pulumi.aws.ec2.VpcArgs.Builder
 type customerOwnedIpv4PoolOwners = com.pulumi.aws.ec2.SubnetArgs.Builder
 
-implicit def convertScalaListToJavaList[A](scalaList: List[A]): java.util.List[A] =
-	scalaList
-	.asJava
 
-implicit def convertScalaMapToJavaMap[A, B](scalaMap: Map[A, B]): java.util.Map[A, B] =
-	scalaMap
-	.asJava
+given mapConv[A, B]: Conversion[Map[A, B], java.util.Map[A, B]] =
+	asJava
+
+given scalaConv[A]: Conversion[List[A], java.util.List[A]] =
+	asJava
+
 
 
 

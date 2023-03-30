@@ -40,6 +40,8 @@ import com.pulumi.aws.ec2.outputs.RouteTableRoute
 import scala.collection.JavaConverters._
 import com.pulumi.aws.ec2.RouteTableAssociationArgs
 import com.pulumi.aws.ec2.RouteTableAssociation
+import com.cisotto.myvpc.monad.given_Monad_Output
+import com.cisotto.myvpc.functor.given_Functor_Output
 
 class VPC(name: String, ty: String = "VPC") {
 
@@ -61,7 +63,15 @@ class VPC(name: String, ty: String = "VPC") {
     //tags(java.util.Map.of("Name", "myIGW")) // can't use Scala map?
   }
 
-  
+  val myRouteTable = routeTable("myRouteTable"){
+    vpcId(myVpc.getId())
+    routes(List(
+      routeTableRouteArgs(){
+        cidrBlock("0.0.0.0/0")
+        gatewayId(myIGW.getId())
+      }
+    ))
+  }
 
   val pvtSubnets: Output[Iterable[aws.ec2.Subnet]] = createAzSubnets(true)
 
@@ -81,15 +91,7 @@ class VPC(name: String, ty: String = "VPC") {
         }
     )
 
-  val myRouteTable = routeTable("myRouteTable"){
-    vpcId(myVpc.getId())
-    routes(List(
-      routeTableRouteArgs(){
-        cidrBlock("0.0.0.0/0")
-        gatewayId(myIGW.getId())
-      }
-    ))
-  }
+
 
   def attachRouteTableToPubSubnets(): Output[Iterable[RouteTableAssociation]] =
     pubSubnets.map((subnets: Iterable[Subnet]) =>
