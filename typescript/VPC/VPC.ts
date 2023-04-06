@@ -1,22 +1,21 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
-import { GetVpcResult, Subnet } from "@pulumi/aws/ec2";
+import { GetVpcResult, InternetGateway, RouteTable, Subnet } from "@pulumi/aws/ec2";
 import { Vpc } from "@pulumi/aws/ec2";
 import { ComponentResource, Output, ResourceOptions } from "@pulumi/pulumi";
 import { threadId } from "worker_threads";
 import { VpcIpv4CidrBlockAssociation } from "@pulumi/aws/ec2/vpcIpv4CidrBlockAssociation";
 import { stringify } from "querystring";
 
-export class VPC extends ComponentResource {
+export class MyVPC extends ComponentResource {
   constructor(name: string, opts?: ResourceOptions) {
     super("VPC:infrastructure:base", name, {}, opts);
-    this.pubSubNets = Array<aws.ec2.Subnet>();
-    this.prvSubNets = Array<aws.ec2.Subnet>();
     this.createVPC();
     this.createIGW();
-    this.createAZsSubnets();
+    this.prvSubNets = this.createAZsSubnets(true);
+    this.pubSubNets = this.createAZsSubnets(false);
     this.createRouteTable();
-    //this.attachRouteTableToPubSubnets();
+    this.attachRouteTableToPubSubnets();
 
     this.registerOutputs({
       vpc: this.vpc,
@@ -40,9 +39,9 @@ export class VPC extends ComponentResource {
 
   public availableZones?: pulumi.Output<aws.GetAvailabilityZonesResult>;
 
-  public prvSubNets: aws.ec2.Subnet[];
+  public prvSubNets: Output<aws.ec2.Subnet[]>;
 
-  public pubSubNets: aws.ec2.Subnet[];
+  public pubSubNets: Output<aws.ec2.Subnet[]>;
 
   public routeTable?: aws.ec2.RouteTable;
 
@@ -52,21 +51,10 @@ export class VPC extends ComponentResource {
   // METHODS
 
   protected createVPC() {
-    this.vpc = new aws.ec2.Vpc("vpc_res", {
+    this.vpc = new Vpc("vpc_res", {
       cidrBlock: "10.136.0.0/24",
       tags: {
-        Name: "myVPC",
-    },
-    },{
-    parent: this,
-    });
-  }
-
-  protected createIGW(){
-    this.gw = new aws.ec2.InternetGateway("gw", {
-      vpcId: this.vpc?.id,
-      tags: {
-          Name: "myIGW",
+        Name: "myVPC-typescript",
       },
     },
     {
@@ -74,42 +62,77 @@ export class VPC extends ComponentResource {
     });
   }
 
+  protected createIGW(){
+    this.gw = new InternetGateway("gw", {
+      vpcId: this.vpc?.id,
+      tags: {
+          Name: "myIGW-typescript",
+      },
+    },
+    {
+      parent: this.vpc,
+    });
+  }
 
-  protected createAZsSubnets(){
-    this.availableZones = aws.getAvailabilityZonesOutput();
+
+  /*protected createAZsSubnets(isPvt: Boolean){
+    this.availableZones = aws.getAvailabilityZonesOutput()
     pulumi.all([this.availableZones.names, this.vpc!.id]).apply(([azNames, vpcId]) => {
-    //this.availableZones.names.apply((azNames: string[]) => {
       let i = 0
+      let listToPushInto: Subnet[] = Array<aws.ec2.Subnet>()
       azNames.forEach(azName => {
-        this.prvSubNets.push(new Subnet(azName + "-pvt-subnet", {
+        let compName = azName + (isPvt ? "-pvt" : "-pub") + "-subnet-typescript"
+        listToPushInto.push(new Subnet(compName, {
           vpcId: vpcId,
           availabilityZone: azName,
-          cidrBlock: this.pvtSubnetsCidrs[i]
+          cidrBlock: isPvt ? this.pvtSubnetsCidrs[i] : this.pubSubnetsCidrs[i],
+          tags: {
+            Name: compName,
+          },
         },
         {
-          parent: this
-        }
-        ));
-
-        this.pubSubNets.push(new Subnet(azName + "-pub-subnet", {
-          vpcId: vpcId,
-          availabilityZone: azName,
-          cidrBlock: this.pubSubnetsCidrs[i]
-        },
-        {
-          parent: this
+          parent: this.vpc
         }
         ));
         i++;
       });
 
       // attaching the route table to the pub sub nets
-      this.attachRouteTableToPubSubnets()
+      if(!isPvt){
+        this.pubSubNets = listToPushInto
+        this.attachRouteTableToPubSubnets()
+      }
+      else
+        this.prvSubNets = listToPushInto
+        
+    });
+  }*/
+
+  protected createAZsSubnets(isPvt: Boolean) : Output<Subnet[]>{
+    this.availableZones = aws.getAvailabilityZonesOutput()
+    return pulumi.all([this.availableZones.names, this.vpc!.id]).apply(([azNames, vpcId]) => {
+      let i = 0
+      let listToPushInto: Subnet[] = Array<aws.ec2.Subnet>()
+      azNames.forEach(azName => {
+        let fullName = azName + (isPvt ? "-pvt" : "-pub") + "-subnet-typescript"
+        listToPushInto.push(new Subnet(fullName, {
+          vpcId: vpcId,
+          availabilityZone: azName,
+          cidrBlock: isPvt ? this.pvtSubnetsCidrs[i] : this.pubSubnetsCidrs[i],
+          tags: {
+            Name: fullName,
+          },
+        },{
+          parent: this.vpc
+        }));
+        i++;
+      });
+      return listToPushInto
     });
   }
 
   protected createRouteTable() {
-    this.routeTable = new aws.ec2.RouteTable("example", {
+    this.routeTable = new RouteTable("example", {
       vpcId: this.vpc!.id,
       routes: [
           {
@@ -118,25 +141,27 @@ export class VPC extends ComponentResource {
           },
       ],
       tags: {
-          Name: "myRouteTable",
+          Name: "myRouteTable-typescript",
       },
   },
   {
-    parent: this,
+    parent: this.vpc,
   });
   }
 
   protected attachRouteTableToPubSubnets(){
     let i = 0
-    this.pubSubNets.forEach(subNet => {
-      new aws.ec2.RouteTableAssociation(`${i}-routeTableAssociation`, {
-        subnetId: subNet.id,
-        routeTableId: this.routeTable!.id,
-      },
-      {
-        parent: this
-      });
-      i++
+    this.pubSubNets.apply(subNets => {
+      subNets.forEach(sn => {
+        new aws.ec2.RouteTableAssociation(`${i}-routeTableAssociation-typescript`, {
+          subnetId: sn.id,
+          routeTableId: this.routeTable!.id,
+        },
+        {
+          parent: this.vpc
+        });
+        i++
+      })
     });
   }
 
@@ -146,7 +171,7 @@ export class VPC extends ComponentResource {
       routeTableId: this.routeTable!.id,
     },
     {
-      parent: this,
+      parent: this.vpc,
     });
   }*/
 }

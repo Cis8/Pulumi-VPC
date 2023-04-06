@@ -8,10 +8,8 @@ import scala.compiletime.ops.string
 
 
 @main def hello: Unit = 
-  println("Hello world!")
-  println("Object instantiated...")
   Pulumi.run(stack)
 
 def stack(ctx: Context) = 
-        VPC("My Custom VPC")
+        VPC("VPC", "My Custom scala VPC")
         

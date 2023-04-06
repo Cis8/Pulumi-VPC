@@ -2,6 +2,8 @@ package com.cisotto.myvpc
 
 import com.cisotto.myvpc.function.*
 import com.cisotto.myvpc.builder.*
+import com.cisotto.myvpc.builder.tupleToMap
+import com.cisotto.myvpc.builder.elemToList
 import com.pulumi.aws.ec2.{InternetGateway, RouteTableAssociation, Vpc}
 import com.pulumi.core.Output
 import com.pulumi.aws
@@ -41,9 +43,9 @@ import scala.collection.JavaConverters._
 import com.pulumi.aws.ec2.RouteTableAssociationArgs
 import com.pulumi.aws.ec2.RouteTableAssociation
 import com.cisotto.myvpc.monad.given_Monad_Output
-import com.cisotto.myvpc.functor.given_Functor_Output
+import com.pulumi.resources.ResourceOptions
 
-class VPC(name: String, ty: String = "VPC") {
+class VPC(ty: String, name: String, opts: ComponentResourceOptions = ComponentResourceOptions.builder().build()) extends ComponentResource(ty, name, opts) {
 
   val pvtSubnetsCidrs: List[String] = List("10.136.0.0/27", "10.136.0.32/27", "10.136.0.64/27")
   val pubSubnetsCidrs: List[String] = List("10.136.0.96/27", "10.136.0.128/27", "10.136.0.160/27")
@@ -51,56 +53,70 @@ class VPC(name: String, ty: String = "VPC") {
 
   // the builder is implicit inside init (the { } block)
   // PROBLEM: the scala compiler doesn't know how to unambiguate the call to a cidrBlock with a given builder in return an another with another
-  val myVpc: Vpc = vpc("scala-main") {
-    cidrBlock("10.0.0.0/24")
-  }
+  val myVpc = vpc("scala-main") ({
+    cidrBlock("10.136.0.0/24")
+    tags("Name" -> "myVpcScala")
+  },{
+    parent(this)
+  })
+
+  //val opt = Some(CustomResourceOptions.builder().parent(myVpc).build())
   /*{
     parent(this) // why doesn't work?
   }*/
   
-  val myIGW: InternetGateway = internetGateway("gw") {
+  val myIGW = internetGateway("gw") ({
     vpcId(myVpc.getId())
-    //tags(java.util.Map.of("Name", "myIGW")) // can't use Scala map?
-  }
+    tags("Name" -> "myIGWScala")
+  },{
+    parent(myVpc)
+  })
 
-  val myRouteTable = routeTable("myRouteTable"){
+  val pvtSubnets = createAzSubnets(true) // Output[Iterable[Subnet]]
+
+  val pubSubnets = createAzSubnets(false) // Output[Iterable[Subnet]]
+
+  val myRouteTable = routeTable("myRouteTable") ({
     vpcId(myVpc.getId())
-    routes(List(
+    routes(
       routeTableRouteArgs(){
         cidrBlock("0.0.0.0/0")
         gatewayId(myIGW.getId())
-      }
-    ))
-  }
+      })
+    tags("Name" -> "myRouteTableScala")
+  },{
+    parent(myVpc)
+  })
 
-  val pvtSubnets: Output[Iterable[aws.ec2.Subnet]] = createAzSubnets(true)
-
-  val pubSubnets: Output[Iterable[aws.ec2.Subnet]] = createAzSubnets(false)
-
-  val routeTableAssociations: Output[Iterable[RouteTableAssociation]] = attachRouteTableToPubSubnets()
+  val routeTableAssociations = attachRouteTableToPubSubnets() // Output[Iterable[RouteTableAssociation]]
 
   def createAzSubnets(isPvt: Boolean) =
-    availabilityZonesNames().map((az: GetAvailabilityZonesResult) =>
       for
-        (name, cidr) <- az.names().zip(if isPvt then pvtSubnetsCidrs else pubSubnetsCidrs)
+        azRes <- availabilityZonesNames()
+        myVpcId <- myVpc.id()
+        tuples = azRes.names().zip(if isPvt then pvtSubnetsCidrs else pubSubnetsCidrs)
       yield
-        subnet(name + "-" + (if isPvt then "pvt" else "pub") + "-subnet"){
-          vpcId(myVpc.getId())
-          availabilityZone(name)
-          cidrBlock(cidr)
-        }
-    )
+        tuples.map((name, cidr) => {
+          val fullName = name + "-" + (if isPvt then "pvt" else "pub") + "-subnet-scala"
+          subnet(fullName) ({
+            vpcId(myVpcId)
+            availabilityZone(name)
+            cidrBlock(cidr)
+            tags("Name" -> fullName)
+          },{
+            parent(myVpc)
+          })
+      })
 
-
-
-  def attachRouteTableToPubSubnets(): Output[Iterable[RouteTableAssociation]] =
-    pubSubnets.map((subnets: Iterable[Subnet]) =>
+  def attachRouteTableToPubSubnets() = // Output[Iterable[RouteTableAssociation]] 
         for
-          (ps, idx) <- subnets.zipWithIndex
+          subnets <- pubSubnets
+          tuples = subnets.zipWithIndex
         yield
-          routeTableAssociation(idx + "-assoc"){
+          tuples.map((ps, idx) => routeTableAssociation(idx + "-assoc-scala") ({
             subnetId(ps.getId())
             routeTableId(myRouteTable.getId())
-          }
-      )
+          }, {
+            parent(myVpc)
+          }))
 }
