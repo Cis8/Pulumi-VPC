@@ -86,6 +86,7 @@ import scala.compiletime.ops.string
 import scala.language.implicitConversions
 
 def baseOpts(using o: CustomResourceOptions.Builder) : Unit = {} 
+//given baseOpts2(using o: CustomResourceOptions.Builder) : Unit = {} 
 
 def ami(param: String)(init: com.pulumi.aws.ec2.AmiArgs.Builder ?=> Unit, initOpt: (CustomResourceOptions.Builder ?=> Unit) = baseOpts): com.pulumi.aws.ec2.Ami =
 	given b: com.pulumi.aws.ec2.AmiArgs.Builder= com.pulumi.aws.ec2.AmiArgs.builder()

@@ -44,6 +44,7 @@ import com.pulumi.aws.ec2.RouteTableAssociationArgs
 import com.pulumi.aws.ec2.RouteTableAssociation
 import com.cisotto.myvpc.monad.given_Monad_Output
 import com.pulumi.resources.ResourceOptions
+//import com.cisotto.myvpc.function.baseOpts2
 
 class VPC(ty: String, name: String, opts: ComponentResourceOptions = ComponentResourceOptions.builder().build()) extends ComponentResource(ty, name, opts) {
 
